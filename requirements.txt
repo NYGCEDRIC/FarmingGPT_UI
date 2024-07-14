@@ -3,5 +3,4 @@ torch
 transformers
 gtts
 speechrecognition
-pyaudio
-
+sounddevice
