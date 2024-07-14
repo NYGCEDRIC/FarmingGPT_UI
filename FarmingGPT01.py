@@ -1,8 +1,6 @@
 import streamlit as st
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModelForSeq2SeqLM
-import sounddevice as sd
 import numpy as np
-import scipy.io.wavfile as wav
 import os
 from gtts import gTTS
 import speech_recognition as sr
@@ -22,11 +20,10 @@ def translate(text, src_lang="hi", tgt_lang="en"):
     translated_text = translation_tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
     return translated_text
 
-def speech_to_text():
+def speech_to_text(audio_file):
     recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        print("Say something:")
-        audio = recognizer.listen(source)
+    with sr.AudioFile(audio_file) as source:
+        audio = recognizer.record(source)
         try:
             text = recognizer.recognize_google(audio, language="hi-IN")
             return text
@@ -34,13 +31,6 @@ def speech_to_text():
             return "Could not understand audio"
         except sr.RequestError:
             return "Error with the request"
-
-def record_audio(filename, duration, fs=44100):
-    print("Recording...")
-    recording = sd.rec(int(duration * fs), samplerate=fs, channels=2, dtype='int16')
-    sd.wait()
-    wav.write(filename, fs, recording)
-    print("Recording finished.")
 
 def text_to_speech(text, lang="hi"):
     tts = gTTS(text=text, lang=lang)
@@ -59,13 +49,17 @@ if st.button("Translate and Respond"):
     response_in_hindi = translate(response_text, src_lang="en", tgt_lang="hi")
     st.write("Response in Hindi:", response_in_hindi)
 
-if st.button("Speak"):
-    st.write("Say something in Hindi:")
-    user_speech = speech_to_text()
+uploaded_file = st.file_uploader("Upload an audio file", type=["wav", "mp3"])
+if uploaded_file is not None:
+    with open("temp_audio.wav", "wb") as f:
+        f.write(uploaded_file.getbuffer())
+    st.write("File uploaded successfully. Processing...")
+    user_speech = speech_to_text("temp_audio.wav")
     st.write("You said:", user_speech)
     translated_speech = translate(user_speech, src_lang="hi", tgt_lang="en")
     inputs = tokenizer(translated_speech, return_tensors="pt")
     response = model.generate(**inputs)
     response_text = tokenizer.decode(response[0], skip_special_tokens=True)
     response_in_hindi = translate(response_text, src_lang="en", tgt_lang="hi")
+    st.write("Response in Hindi:", response_in_hindi)
     text_to_speech(response_in_hindi)
