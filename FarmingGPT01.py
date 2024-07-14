@@ -5,8 +5,8 @@ import os
 from gtts import gTTS
 import speech_recognition as sr
 
-# Use st.experimental_singleton to load models only once
-@st.experimental_singleton
+# Use st.cache_resource to load models only once
+@st.cache_resource
 def load_models():
     tokenizer = AutoTokenizer.from_pretrained("Franklin01/Llama-2-7b-farmingGPT-finetune")
     model = AutoModelForCausalLM.from_pretrained("Franklin01/Llama-2-7b-farmingGPT-finetune")
@@ -40,7 +40,7 @@ def text_to_speech(text, lang="hi"):
     tts.save("output.mp3")
     os.system("mpg321 output.mp3")
 
-st.title("FarmingGPT")
+st.title("FarmingGPT Chatbot")
 
 user_input = st.text_input("Enter your message (in Hindi):")
 if st.button("Translate and Respond"):
