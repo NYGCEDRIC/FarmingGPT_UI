@@ -5,8 +5,7 @@ import os
 from gtts import gTTS
 import speech_recognition as sr
 
-# Use st.cache_resource to load models only once
-@st.cache_resource
+@st.cache(hash_funcs={AutoTokenizer: id, AutoModelForCausalLM: id, AutoModelForSeq2SeqLM: id})
 def load_models():
     tokenizer = AutoTokenizer.from_pretrained("Franklin01/Llama-2-7b-farmingGPT-finetune")
     model = AutoModelForCausalLM.from_pretrained("Franklin01/Llama-2-7b-farmingGPT-finetune")
