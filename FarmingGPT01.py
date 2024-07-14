@@ -1,13 +1,17 @@
-# loadinf the our hf model
-from transformers import AutoTokenizer, AutoModelForCausalLM
+import streamlit as st
+from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModelForSeq2SeqLM
+import sounddevice as sd
+import numpy as np
+import scipy.io.wavfile as wav
+import os
+from gtts import gTTS
+import speech_recognition as sr
 
+# Load FarmingGPT model
 tokenizer = AutoTokenizer.from_pretrained("Franklin01/Llama-2-7b-farmingGPT-finetune")
 model = AutoModelForCausalLM.from_pretrained("Franklin01/Llama-2-7b-farmingGPT-finetune")
 
-# Adding Translation Capabilities with SeamlessM4T
-
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-
+# Load SeamlessM4T model for translation
 translation_model_name = "facebook/nllb-200-distilled-600M"
 translation_tokenizer = AutoTokenizer.from_pretrained(translation_model_name)
 translation_model = AutoModelForSeq2SeqLM.from_pretrained(translation_model_name)
@@ -18,13 +22,8 @@ def translate(text, src_lang="hi", tgt_lang="en"):
     translated_text = translation_tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
     return translated_text
 
-#Implement Speech-to-Text
-
-import speech_recognition as sr
-
-recognizer = sr.Recognizer()
-
 def speech_to_text():
+    recognizer = sr.Recognizer()
     with sr.Microphone() as source:
         print("Say something:")
         audio = recognizer.listen(source)
@@ -36,19 +35,17 @@ def speech_to_text():
         except sr.RequestError:
             return "Error with the request"
 
-# Implement Text-to-Speech
-
-from gtts import gTTS
-import os
+def record_audio(filename, duration, fs=44100):
+    print("Recording...")
+    recording = sd.rec(int(duration * fs), samplerate=fs, channels=2, dtype='int16')
+    sd.wait()
+    wav.write(filename, fs, recording)
+    print("Recording finished.")
 
 def text_to_speech(text, lang="hi"):
     tts = gTTS(text=text, lang=lang)
     tts.save("output.mp3")
     os.system("mpg321 output.mp3")
-
-# Creating a simple Streamlit UI
-
-import streamlit as st
 
 st.title("FarmingGPT Chatbot")
 
