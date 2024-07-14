@@ -5,14 +5,17 @@ import os
 from gtts import gTTS
 import speech_recognition as sr
 
-# Load FarmingGPT model
-tokenizer = AutoTokenizer.from_pretrained("Franklin01/Llama-2-7b-farmingGPT-finetune")
-model = AutoModelForCausalLM.from_pretrained("Franklin01/Llama-2-7b-farmingGPT-finetune")
+# Use st.experimental_singleton to load models only once
+@st.experimental_singleton
+def load_models():
+    tokenizer = AutoTokenizer.from_pretrained("Franklin01/Llama-2-7b-farmingGPT-finetune")
+    model = AutoModelForCausalLM.from_pretrained("Franklin01/Llama-2-7b-farmingGPT-finetune")
+    translation_model_name = "facebook/nllb-200-distilled-600M"
+    translation_tokenizer = AutoTokenizer.from_pretrained(translation_model_name)
+    translation_model = AutoModelForSeq2SeqLM.from_pretrained(translation_model_name)
+    return tokenizer, model, translation_tokenizer, translation_model
 
-# Load SeamlessM4T model for translation
-translation_model_name = "facebook/nllb-200-distilled-600M"
-translation_tokenizer = AutoTokenizer.from_pretrained(translation_model_name)
-translation_model = AutoModelForSeq2SeqLM.from_pretrained(translation_model_name)
+tokenizer, model, translation_tokenizer, translation_model = load_models()
 
 def translate(text, src_lang="hi", tgt_lang="en"):
     inputs = translation_tokenizer(text, return_tensors="pt", src_lang=src_lang, tgt_lang=tgt_lang)
@@ -37,7 +40,7 @@ def text_to_speech(text, lang="hi"):
     tts.save("output.mp3")
     os.system("mpg321 output.mp3")
 
-st.title("FarmingGPT Chatbot")
+st.title("FarmingGPT")
 
 user_input = st.text_input("Enter your message (in Hindi):")
 if st.button("Translate and Respond"):
