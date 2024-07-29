@@ -1,67 +1,44 @@
 import streamlit as st
-from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModelForSeq2SeqLM
-import numpy as np
-import os
-from gtts import gTTS
-import speech_recognition as sr
+import base64
+import vertexai
+from vertexai.generative_models import GenerativeModel, Part
+import vertexai.preview.generative_models as generative_models
 
-@st.cache(hash_funcs={AutoTokenizer: id, AutoModelForCausalLM: id, AutoModelForSeq2SeqLM: id})
-def load_models():
-    tokenizer = AutoTokenizer.from_pretrained("Franklin01/Llama-2-7b-farmingGPT-finetune")
-    model = AutoModelForCausalLM.from_pretrained("Franklin01/Llama-2-7b-farmingGPT-finetune")
-    translation_model_name = "facebook/nllb-200-distilled-600M"
-    translation_tokenizer = AutoTokenizer.from_pretrained(translation_model_name)
-    translation_model = AutoModelForSeq2SeqLM.from_pretrained(translation_model_name)
-    return tokenizer, model, translation_tokenizer, translation_model
 
-tokenizer, model, translation_tokenizer, translation_model = load_models()
+def multiturn_generate_content(messages):
+    vertexai.init(project="765133488826", location="us-central1")
+    model = GenerativeModel(
+        "projects/765133488826/locations/us-central1/endpoints/7733417232985751552",
+    )
+    chat = model.start_chat()
+    responses = []
+    for message in messages:
+        response = chat.send_message(
+            [message],
+            generation_config=generation_config,
+            safety_settings=safety_settings
+        )
+        responses.append(response)
+    return responses
 
-def translate(text, src_lang="hi", tgt_lang="en"):
-    inputs = translation_tokenizer(text, return_tensors="pt", src_lang=src_lang, tgt_lang=tgt_lang)
-    translated_tokens = translation_model.generate(**inputs)
-    translated_text = translation_tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
-    return translated_text
 
-def speech_to_text(audio_file):
-    recognizer = sr.Recognizer()
-    with sr.AudioFile(audio_file) as source:
-        audio = recognizer.record(source)
-        try:
-            text = recognizer.recognize_google(audio, language="hi-IN")
-            return text
-        except sr.UnknownValueError:
-            return "Could not understand audio"
-        except sr.RequestError:
-            return "Error with the request"
+generation_config = {
+    "max_output_tokens": 2048,
+    "temperature": 1,
+    "top_p": 1,
+}
 
-def text_to_speech(text, lang="hi"):
-    tts = gTTS(text=text, lang=lang)
-    tts.save("output.mp3")
-    os.system("mpg321 output.mp3")
+safety_settings = {
+    generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+}
 
+text4_1 = """What are the the fertilizers dosages in terms of per tree and the procedure of application in the 11th year stage of coconut trees."""
+
+# Streamlit UI
 st.title("FarmingGPT Chatbot")
+st.write("Ask your questions related to farming.")
 
-user_input = st.text_input("Enter your message (in Hindi):")
-if st.button("Translate and Respond"):
-    translated_text = translate(user_input, src_lang="hi", tgt_lang="en")
-    inputs = tokenizer(translated_text, return_tensors="pt")
-    response = model.generate(**inputs)
-    response_text = tokenizer.decode(response[0], skip_special_tokens=True)
-    st.write("Response in English:", response_text)
-    response_in_hindi = translate(response_text, src_lang="en", tgt_lang="hi")
-    st.write("Response in Hindi:", response_in_hindi)
-
-uploaded_file = st.file_uploader("Upload an audio file", type=["wav", "mp3"])
-if uploaded_file is not None:
-    with open("temp_audio.wav", "wb") as f:
-        f.write(uploaded_file.getbuffer())
-    st.write("File uploaded successfully. Processing...")
-    user_speech = speech_to_text("temp_audio.wav")
-    st.write("You said:", user_speech)
-    translated_speech = translate(user_speech, src_lang="hi", tgt_lang="en")
-    inputs = tokenizer(translated_speech, return_tensors="pt")
-    response = model.generate(**inputs)
-    response_text = tokenizer.decode(response[0], skip_special_tokens=True)
-    response_in_hindi = translate(response_text, src_lang="en", tgt_lang="hi")
-    st.write("Response in Hindi:", response_in_hindi)
-    text_to_speech(response_in_hindi)
+if 'messages' n
