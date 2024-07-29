@@ -4,7 +4,6 @@ import vertexai
 from vertexai.generative_models import GenerativeModel, Part
 import vertexai.preview.generative_models as generative_models
 
-
 def multiturn_generate_content(messages):
     vertexai.init(project="765133488826", location="us-central1")
     model = GenerativeModel(
@@ -18,9 +17,8 @@ def multiturn_generate_content(messages):
             generation_config=generation_config,
             safety_settings=safety_settings
         )
-        responses.append(response)
+        responses.append(response.result)
     return responses
-
 
 generation_config = {
     "max_output_tokens": 2048,
@@ -41,4 +39,19 @@ text4_1 = """What are the the fertilizers dosages in terms of per tree and the p
 st.title("FarmingGPT Chatbot")
 st.write("Ask your questions related to farming.")
 
-if 'messages' n
+if 'messages' not in st.session_state:
+    st.session_state['messages'] = []
+
+message = st.text_input("Enter your message:", "")
+if st.button("Send"):
+    st.session_state['messages'].append(message)
+    responses = multiturn_generate_content(st.session_state['messages'])
+    st.session_state['messages'].append(responses[-1])  # Append the latest response
+
+# Display conversation
+for i, msg in enumerate(st.session_state['messages']):
+    if i % 2 == 0:
+        st.write(f"**You:** {msg}")
+    else:
+        st.write(f"**FarmingGPT:** {msg}")
+
