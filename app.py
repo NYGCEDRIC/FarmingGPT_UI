@@ -1,31 +1,24 @@
 import streamlit as st
-import base64
+import os
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part
 import vertexai.preview.generative_models as generative_models
 
-def multiturn_generate_content(messages):
-    vertexai.init(project="765133488826", location="us-central1")
-    model = GenerativeModel(
-        "projects/765133488826/locations/us-central1/endpoints/7733417232985751552",
-    )
-    chat = model.start_chat()
-    responses = []
-    for message in messages:
-        response = chat.send_message(
-            [message],
-            generation_config=generation_config,
-            safety_settings=safety_settings
-        )
-        responses.append(response.result)
-    return responses
+# Write the service account key to a file
+with open("service_account.json", "w") as f:
+    f.write(st.secrets["GOOGLE_APPLICATION_CREDENTIALS_CONTENT"])
 
-generation_config = {
-    "max_output_tokens": 2048,
-    "temperature": 1,
-    "top_p": 1,
-}
+# Set the environment variable
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "service_account.json"
 
+# Initialize Vertex AI
+project_id = "765133488826"
+vertexai.init(project=project_id, location="us-central1")
+
+# Initialize the model
+model = GenerativeModel("projects/765133488826/locations/us-central1/endpoints/7733417232985751552")
+
+# Define the safety settings
 safety_settings = {
     generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
     generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
@@ -33,7 +26,20 @@ safety_settings = {
     generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
 }
 
-text4_1 = """What are the the fertilizers dosages in terms of per tree and the procedure of application in the 11th year stage of coconut trees."""
+generation_config = {
+    "max_output_tokens": 2048,
+    "temperature": 1,
+    "top_p": 1,
+}
+
+# Function to generate content from the model
+def generate_response(prompt):
+    response = model.generate_content(
+        prompt,
+        generation_config=generation_config,
+        safety_settings=safety_settings
+    )
+    return response.text
 
 # Streamlit UI
 st.title("FarmingGPT Chatbot")
@@ -44,14 +50,10 @@ if 'messages' not in st.session_state:
 
 message = st.text_input("Enter your message:", "")
 if st.button("Send"):
-    st.session_state['messages'].append(message)
-    responses = multiturn_generate_content(st.session_state['messages'])
-    st.session_state['messages'].append(responses[-1])  # Append the latest response
+    st.session_state['messages'].append(f"You: {message}")
+    response = generate_response(message)
+    st.session_state['messages'].append(f"FarmingGPT: {response}")
 
 # Display conversation
-for i, msg in enumerate(st.session_state['messages']):
-    if i % 2 == 0:
-        st.write(f"**You:** {msg}")
-    else:
-        st.write(f"**FarmingGPT:** {msg}")
-
+for msg in st.session_state['messages']:
+    st.write(msg)
