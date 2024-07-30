@@ -54,4 +54,11 @@ if 'messages' not in st.session_state:
 
 message = st.text_input("Enter your message:", "")
 if st.button("Send"):
-    st.session_state['messages
+    st.session_state['messages'].append(f"You: {message}")
+    responses = multiturn_generate_content()
+    for response in responses:
+        st.session_state['messages'].append(f"FarmingGPT: {response}")
+
+# Display conversation
+for msg in st.session_state['messages']:
+    st.write(msg)
